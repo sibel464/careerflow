@@ -1,0 +1,67 @@
+@import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Nunito:wght@300;400;500;600;700;800&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Nunito', sans-serif;
+  --font-serif: 'Lora', serif;
+  
+  --animate-fade-in: fadeIn 0.4s ease-out;
+  --animate-slide-up: slideUp 0.5s ease-out forwards;
+  --animate-blob: blob 15s infinite;
+}
+
+@layer base {
+  body {
+    @apply bg-[#f4ebd8] text-[#4a3f35] antialiased font-sans transition-colors duration-300 overflow-hidden;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-serif;
+  }
+
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-[#d4c5b0] rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-[#b8a38a];
+  }
+}
+
+@layer utilities {
+  .glass-panel {
+    @apply bg-white/40 backdrop-blur-2xl border border-white/60 shadow-[0_8px_32px_rgba(107,76,58,0.06)] rounded-3xl transition-all duration-500;
+  }
+  .glass-panel-hover {
+    @apply hover:bg-white/50 hover:shadow-[0_15px_40px_rgba(107,76,58,0.12)] hover:-translate-y-1 hover:border-white/80;
+  }
+  .glass-input {
+    @apply bg-white/50 backdrop-blur-md border border-white/60 focus:bg-white/70 focus:border-[#2c5e4a]/40 shadow-inner;
+  }
+  .animate-delay-100 { animation-delay: 1s; }
+  .animate-delay-200 { animation-delay: 2s; }
+  .animate-delay-300 { animation-delay: 3s; }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes blob {
+  0% { transform: translate(0px, 0px) scale(1) rotate(0deg); }
+  33% { transform: translate(50px, -50px) scale(1.1) rotate(10deg); }
+  66% { transform: translate(-30px, 30px) scale(0.9) rotate(-10deg); }
+  100% { transform: translate(0px, 0px) scale(1) rotate(0deg); }
+}
