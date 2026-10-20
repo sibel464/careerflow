@@ -1,200 +1,288 @@
-import React from 'react';
-import { Briefcase, Clock, CheckCircle2, XCircle, ArrowRight, Leaf, Coffee, Calendar, CheckSquare } from 'lucide-react';
+import React, { useState } from 'react';
+import { Briefcase, Clock, CheckCircle2, XCircle, ArrowRight, Leaf, Coffee, Calendar, CheckSquare, Mail, Plus, TrendingUp } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useApplications } from '../Hooks/ApplicationContext';
+import { usePreferences } from '../Hooks/PreferencesContext';
+import { useEditor } from '../Hooks/EditorContext';
 import { StatCard } from '../Components/StatCard';
 import { ApplicationCard } from '../Components/ApplicationCard';
 import { ApplicationTable } from '../Components/ApplicationTable';
+import { CompanyAvatar } from '../Components/CompanyAvatar';
+import { appliedThisWeek, needsFollowUp, pendingTodos, responseRate, greeting, daysSince, upcomingInterviews, currentStreak } from '../Utils/insights';
+import { Countdown } from '../Components/Countdown';
+import { Companion } from '../Components/Companion';
+import { useGarden } from '../Hooks/useGarden';
+import { LEVELS } from '../Utils/achievements';
+import { format, parseISO } from 'date-fns';
+import { tr } from 'date-fns/locale';
+
+const QUOTES = [
+  'Her harika başarı, küçük bir adımla başlar. 🌿',
+  'Gelecek, ona bugünden hazırlananlara aittir. ☕',
+  'Fırsatlar kapıyı çalmaz, sen o kapıyı inşa edersin. 🚪✨',
+  'Başarı, her gün tekrarlanan küçük çabaların toplamıdır. 🌱',
+  'Bir "hayır", doğru "evet"e bir adım daha yakın demek. 🍂',
+];
+
+const GoalRing: React.FC<{ value: number; goal: number }> = ({ value, goal }) => {
+  const radius = 52;
+  const circumference = 2 * Math.PI * radius;
+  const progress = Math.min(value / Math.max(goal, 1), 1);
+  return (
+    <div className="relative w-32 h-32 shrink-0">
+      <svg viewBox="0 0 120 120" className="w-full h-full -rotate-90">
+        <circle cx="60" cy="60" r={radius} fill="none" strokeWidth="12" className="stroke-sand/50" />
+        <circle
+          cx="60" cy="60" r={radius} fill="none" strokeWidth="12" strokeLinecap="round"
+          className="stroke-moss transition-[stroke-dashoffset] duration-1000 ease-out"
+          strokeDasharray={circumference}
+          strokeDashoffset={circumference * (1 - progress)}
+        />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <span className="text-3xl font-black text-ink leading-none">{value}</span>
+        <span className="text-xs font-bold text-ink-muted">/ {goal}</span>
+      </div>
+    </div>
+  );
+};
 
 export const Dashboard: React.FC = () => {
-  const { applications, getStats } = useApplications();
+  const { applications, getStats, toggleTodo } = useApplications();
+  const { preferences } = usePreferences();
+  const { openEditor } = useEditor();
   const navigate = useNavigate();
   const stats = getStats();
 
-  const recentApplications = applications.slice(0, 5);
+  const [quote] = useState(() => QUOTES[Math.floor(Math.random() * QUOTES.length)]);
+  const hello = greeting();
 
-  const upcomingInterviews = applications.filter(app => 
-    app.status === 'Mülakat Bekleniyor' || app.interviewStage !== 'Henüz Yok'
-  ).slice(0, 4);
-
-  const pendingTodos = applications.flatMap(app => 
-    (app.todos || []).filter(todo => !todo.completed).map(todo => ({
-      ...todo,
-      companyName: app.companyName,
-      appId: app.id
-    }))
-  ).slice(0, 4);
-
-  const quotes = [
-    "Her harika başarı, küçük bir adımla başlar. 🌿",
-    "Gelecek, ona bugünden hazırlananlara aittir. ☕",
-    "Fırsatlar kapıyı çalmaz, sen o kapıyı inşa edersin. 🚪✨",
-    "Başarı, her gün tekrarlanan küçük çabaların toplamıdır. 🌱"
-  ];
-  const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
+  const recentApplications = [...applications]
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .slice(0, 5);
+  const thisWeek = appliedThisWeek(applications).length;
+  const goal = preferences.weeklyGoal;
+  const interviews = applications
+    .filter(app => app.status === 'Mülakat Bekleniyor' || (app.status === 'Mülakat Yapıldı' && app.interviewStage !== 'Henüz Yok'))
+    .slice(0, 4);
+  const todos = pendingTodos(applications).slice(0, 5);
+  const followUps = needsFollowUp(applications).slice(0, 3);
+  const nextInterview = upcomingInterviews(applications)[0];
+  const { level, xp } = useGarden();
+  const streak = currentStreak(applications);
 
   return (
-    <div className="space-y-8 animate-fade-in relative z-10 pb-12">
+    <div className="space-y-8 relative z-10 pb-12">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Hero Section */}
-        <div className="lg:col-span-2 flex flex-col md:flex-row md:justify-between md:items-center gap-6 glass-panel p-8 bg-white/30 relative overflow-hidden">
-          <div className="absolute top-[-20%] right-[-10%] opacity-20 pointer-events-none">
-            <Leaf className="w-64 h-64 text-[#2c5e4a]" />
+        {/* Hero */}
+        <div className="lg:col-span-2 flex flex-col md:flex-row md:justify-between md:items-center gap-6 glass-panel p-8 relative overflow-hidden">
+          <div className="absolute top-[-20%] right-[-10%] opacity-15 pointer-events-none">
+            <Leaf className="w-64 h-64 text-moss" />
           </div>
           <div className="relative z-10">
-            <div className="inline-flex items-center space-x-2 bg-white/60 backdrop-blur-md px-3 py-1 rounded-full text-[#4a3f35] text-xs font-bold tracking-wider mb-4 border border-white/80 shadow-sm">
-              <Coffee className="w-3.5 h-3.5" />
-              <span>Günün Sözü: {randomQuote}</span>
+            <div className="flex flex-wrap gap-2 mb-4">
+              <div className="inline-flex items-center gap-2 bg-glass/60 backdrop-blur-md px-3 py-1 rounded-full text-ink text-xs font-bold tracking-wide border border-glass/80 shadow-sm">
+                <Coffee className="w-3.5 h-3.5 shrink-0" />
+                <span>{quote}</span>
+              </div>
+              <button
+                onClick={() => navigate('/growth/garden')}
+                className="inline-flex items-center gap-2 bg-moss/10 hover:bg-moss/20 px-3 py-1 rounded-full text-moss text-xs font-black border border-moss/20 transition-colors"
+              >
+                {LEVELS[level].emoji} {LEVELS[level].name} · {xp} XP{streak > 0 && ` · 🔥 ${streak} gün`}
+              </button>
             </div>
-            <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight mb-3 text-[#4a3f35] drop-shadow-sm font-serif">
-              Hoş Geldin! 🌻
+            <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight mb-3 text-ink font-serif">
+              {hello.text}{preferences.userName ? `, ${preferences.userName}` : ''}! {hello.emoji}
             </h1>
-            <p className="text-[#6b4c3a] text-lg max-w-xl font-medium">
-              Kariyer yolculuğunu doğanın huzuruyla yönet. Başvurularını takip et, mülakatlarını planla ve hayalindeki işe ulaş! 🎯
+            <p className="text-ink-soft text-lg max-w-xl font-medium">
+              {stats.total === 0
+                ? 'Kariyer yolculuğunu doğanın huzuruyla yönet. İlk başvurunu ekleyerek başla! 🎯'
+                : `Şu ana kadar ${stats.total} başvuru yaptın ve ${responseRate(applications)}% oranında geri dönüş aldın. Böyle devam! 🎯`}
             </p>
           </div>
-          <button 
-            onClick={() => navigate('/applications')}
-            className="relative z-10 inline-flex items-center justify-center px-6 py-3.5 text-sm font-bold text-white bg-[#2c5e4a]/90 backdrop-blur-md rounded-xl hover:bg-[#2c5e4a] hover:scale-105 transition-all shadow-lg border border-[#3d7a62]/50 active:scale-95 whitespace-nowrap"
+          <button
+            onClick={() => openEditor(null)}
+            className="btn-primary relative z-10 px-6 py-3.5 text-sm hover:scale-105 whitespace-nowrap"
           >
             Yeni Başvuru 📝
             <ArrowRight className="w-5 h-5 ml-2" />
           </button>
         </div>
 
-        {/* Goal Tracker */}
-        <div className="glass-panel p-6 bg-white/40 flex flex-col justify-center relative overflow-hidden">
-          <div className="relative z-10">
-            <h3 className="text-lg font-bold text-[#4a3f35] mb-2 font-serif flex items-center">
-              <Leaf className="w-5 h-5 mr-2 text-[#c05c3e]" />
-              Haftalık Hedef 🎯
-            </h3>
-            <p className="text-[#6b4c3a] text-sm font-medium mb-4">Bu hafta 5 başvuru hedefine ulaşmak için son durumun:</p>
-            
-            <div className="flex justify-between items-end mb-2">
-              <span className="text-3xl font-black text-[#2c5e4a] drop-shadow-sm">{Math.min(recentApplications.length, 5)}<span className="text-lg text-[#a38b76]">/5</span></span>
-              <span className="text-xs font-bold text-[#c05c3e] bg-white/60 px-2 py-1 rounded-md shadow-sm border border-white/80">
-                {recentApplications.length >= 5 ? 'Hedef Tamamlandı! 🎉' : 'Devam Et! 💪'}
-              </span>
-            </div>
-            
-            <div className="w-full bg-white/50 rounded-full h-3.5 mb-2 shadow-inner border border-white/60 overflow-hidden">
-              <div 
-                className="bg-[#2c5e4a] h-3.5 rounded-full transition-all duration-1000 ease-out relative" 
-                style={{ width: `${Math.min((recentApplications.length / 5) * 100, 100)}%` }}
-              >
-                <div className="absolute top-0 right-0 bottom-0 left-0 bg-white/20 w-full h-full animate-[pulse_2s_ease-in-out_infinite]"></div>
-              </div>
-            </div>
+        {/* Weekly goal */}
+        <div className="glass-panel p-6 flex items-center gap-5 relative overflow-hidden">
+          <GoalRing value={thisWeek} goal={goal} />
+          <div className="min-w-0">
+            <h3 className="text-lg font-bold text-ink mb-1 font-serif">Haftalık Hedef 🎯</h3>
+            <p className="text-ink-soft text-sm font-medium mb-3">
+              Bu hafta {thisWeek} başvuru yaptın.
+            </p>
+            <span className="inline-block text-xs font-bold text-clay bg-glass/60 px-2 py-1 rounded-md shadow-sm border border-glass/80">
+              {thisWeek >= goal ? 'Hedef tamamlandı! 🎉' : `${goal - thisWeek} başvuru kaldı 💪`}
+            </span>
+            <button onClick={() => navigate('/settings')} className="block mt-3 text-xs font-bold text-ink-muted hover:text-moss underline-offset-2 hover:underline">
+              Hedefi değiştir
+            </button>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard title="Toplam Başvuru 📂" value={stats.total} icon={Briefcase} colorClass="text-[#c05c3e]" />
-        <StatCard title="Bekleyen ⏳" value={stats.pending} icon={Clock} colorClass="text-[#6b4c3a]" />
-        <StatCard title="Kabul Edilenler 🎉" value={stats.accepted} icon={CheckCircle2} colorClass="text-[#2c5e4a]" />
-        <StatCard title="Reddedilenler 🍂" value={stats.rejected} icon={XCircle} colorClass="text-[#8c3a3a]" />
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+        <StatCard title="Toplam Başvuru 📂" value={stats.total} icon={Briefcase} colorClass="text-clay" />
+        <StatCard title="Bekleyen ⏳" value={stats.pending} icon={Clock} colorClass="text-ink-soft" />
+        <StatCard title="Kabul Edilenler 🎉" value={stats.accepted} icon={CheckCircle2} colorClass="text-moss" />
+        <StatCard title="Reddedilenler 🍂" value={stats.rejected} icon={XCircle} colorClass="text-[#8c3a3a] dark:text-[#e08a7a]" />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8">
-        {/* Sol Taraf: Son Başvurular */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Recent applications */}
         <div className="lg:col-span-2">
           <div className="flex justify-between items-end mb-6">
             <div>
-              <h2 className="text-2xl font-bold text-[#4a3f35] tracking-tight font-serif">Son Başvurular 📌</h2>
-              <p className="text-[#6b4c3a] text-sm mt-1">En son eklediğiniz 5 başvuru kaydı.</p>
+              <h2 className="text-2xl font-bold text-ink tracking-tight font-serif">Son Başvurular 📌</h2>
+              <p className="text-ink-soft text-sm mt-1">En son eklediğin 5 başvuru kaydı.</p>
             </div>
-            <button 
+            <button
               onClick={() => navigate('/applications')}
-              className="text-sm font-bold text-[#c05c3e] hover:text-[#a0482d] group flex items-center bg-white/50 px-3 py-1.5 rounded-xl border border-white/80 shadow-sm backdrop-blur-sm"
+              className="text-sm font-bold text-clay hover:text-clay-deep group flex items-center bg-glass/50 px-3 py-1.5 rounded-xl border border-glass/80 shadow-sm backdrop-blur-sm"
             >
               Tümünü Gör 👀
               <ArrowRight className="w-4 h-4 ml-1 transform group-hover:translate-x-1 transition-transform" />
             </button>
           </div>
-          
+
           {recentApplications.length > 0 ? (
             <>
-              <ApplicationTable 
-                applications={recentApplications} 
-                onEdit={() => navigate('/applications')}
-                onDelete={() => navigate('/applications')}
-              />
+              <ApplicationTable applications={recentApplications} />
               <div className="md:hidden space-y-4">
                 {recentApplications.map(app => (
-                  <ApplicationCard 
-                    key={app.id} 
-                    application={app} 
-                    onEdit={() => navigate('/applications')}
-                    onDelete={() => navigate('/applications')}
-                  />
+                  <ApplicationCard key={app.id} application={app} />
                 ))}
               </div>
             </>
           ) : (
-            <div className="glass-panel p-12 text-center bg-white/30">
-              <div className="w-20 h-20 bg-white/60 border border-white/80 text-[#6b4c3a] mx-auto rounded-full flex items-center justify-center mb-4 shadow-sm">
+            <div className="glass-panel p-12 text-center">
+              <div className="w-20 h-20 bg-glass/60 border border-glass/80 text-ink-soft mx-auto rounded-full flex items-center justify-center mb-4 shadow-sm">
                 <Briefcase className="w-10 h-10" />
               </div>
-              <h3 className="text-xl font-bold text-[#4a3f35] mb-2 font-serif">Henüz hiç başvuru yok 🌱</h3>
-              <p className="text-[#6b4c3a] mb-6 max-w-md mx-auto">Tohumları ekmeye başla! İlk başvurunu ekle ve süreci takip et.</p>
-              <button 
-                onClick={() => navigate('/applications')}
-                className="inline-flex items-center px-6 py-3 bg-[#2c5e4a] text-white rounded-xl font-bold hover:bg-[#3d7a62] hover:scale-105 transition-all shadow-lg"
-              >
+              <h3 className="text-xl font-bold text-ink mb-2 font-serif">Henüz hiç başvuru yok 🌱</h3>
+              <p className="text-ink-soft mb-6 max-w-md mx-auto">Tohumları ekmeye başla! İlk başvurunu ekle ve süreci takip et.</p>
+              <button onClick={() => openEditor(null)} className="btn-primary px-6 py-3 hover:scale-105">
                 İlk Başvuruyu Ekle ✨
               </button>
             </div>
           )}
         </div>
 
-        {/* Sağ Taraf: Widgetlar */}
+        {/* Widgets */}
         <div className="space-y-6">
-          {/* Yaklaşan Etkinlikler / Mülakatlar */}
-          <div className="glass-panel p-6 bg-white/40">
-            <h3 className="text-lg font-bold text-[#4a3f35] mb-4 flex items-center font-serif">
-              <Calendar className="w-5 h-5 mr-2 text-[#c05c3e]" />
-              Süreçteki Mülakatlar
-            </h3>
-            {upcomingInterviews.length > 0 ? (
-              <div className="space-y-3">
-                {upcomingInterviews.map(app => (
-                  <div key={app.id} className="p-3 bg-white/60 border border-white/80 rounded-xl shadow-sm hover:scale-[1.02] transition-transform cursor-pointer" onClick={() => navigate('/applications')}>
-                    <p className="font-bold text-[#4a3f35] text-sm">{app.companyName}</p>
-                    <p className="text-xs font-bold text-[#6b4c3a] mt-0.5">{app.interviewStage !== 'Henüz Yok' ? app.interviewStage : 'Mülakat Bekleniyor'}</p>
-                  </div>
+          {nextInterview && (
+            <div className="glass-panel p-6 relative overflow-hidden border-clay/30">
+              <span className="absolute -right-4 -top-4 text-7xl opacity-10 rotate-12 select-none pointer-events-none">🎤</span>
+              <p className="text-xs font-black uppercase tracking-widest text-clay mb-3">Sıradaki mülakat</p>
+              <button onClick={() => openEditor(nextInterview)} className="flex items-center gap-3 mb-4 text-left w-full">
+                <CompanyAvatar name={nextInterview.companyName} className="h-11 w-11 text-sm" />
+                <span className="min-w-0">
+                  <span className="block font-bold text-ink truncate">{nextInterview.companyName}</span>
+                  <span className="block text-xs font-semibold text-ink-muted">
+                    {format(parseISO(nextInterview.interviewDate!), 'd MMMM EEEE, HH:mm', { locale: tr })}
+                  </span>
+                </span>
+              </button>
+              <Countdown target={nextInterview.interviewDate!} compact />
+              <button onClick={() => navigate('/calendar')} className="w-full mt-4 text-xs font-bold text-moss hover:underline flex items-center justify-center gap-1">
+                <Calendar className="w-3.5 h-3.5" /> Takvimi aç
+              </button>
+            </div>
+          )}
+
+          {followUps.length > 0 && (
+            <div className="glass-panel p-6 border-clay/30">
+              <h3 className="text-lg font-bold text-ink mb-1 flex items-center font-serif">
+                <Mail className="w-5 h-5 mr-2 text-clay" />
+                Takip Zamanı
+              </h3>
+              <p className="text-xs font-semibold text-ink-muted mb-4">Bir haftadır ses yok — kibar bir hatırlatma iyi gelebilir.</p>
+              <div className="space-y-2">
+                {followUps.map(app => (
+                  <button key={app.id} onClick={() => openEditor(app)} className="w-full flex items-center gap-3 p-2.5 bg-glass/50 border border-glass/70 rounded-xl hover:bg-glass/70 transition-colors text-left">
+                    <CompanyAvatar name={app.companyName} className="h-9 w-9 text-xs rounded-lg" />
+                    <span className="min-w-0 flex-1">
+                      <span className="block font-bold text-ink text-sm truncate">{app.companyName}</span>
+                      <span className="block text-xs font-semibold text-ink-muted">{daysSince(app.updatedAt)} gün önce güncellendi</span>
+                    </span>
+                  </button>
                 ))}
               </div>
+            </div>
+          )}
+
+          <div className="glass-panel p-6">
+            <h3 className="text-lg font-bold text-ink mb-4 flex items-center font-serif">
+              <Calendar className="w-5 h-5 mr-2 text-clay" />
+              Süreçteki Mülakatlar
+            </h3>
+            {interviews.length > 0 ? (
+              <div className="space-y-2">
+                {interviews.map(app => (
+                  <button key={app.id} onClick={() => openEditor(app)} className="w-full flex items-center gap-3 p-2.5 bg-glass/60 border border-glass/80 rounded-xl shadow-sm hover:scale-[1.02] transition-transform text-left">
+                    <CompanyAvatar name={app.companyName} className="h-9 w-9 text-xs rounded-lg" />
+                    <span className="min-w-0">
+                      <span className="block font-bold text-ink text-sm truncate">{app.companyName}</span>
+                      <span className="block text-xs font-bold text-ink-soft truncate">
+                        {app.interviewStage && app.interviewStage !== 'Henüz Yok' ? app.interviewStage : 'Mülakat Bekleniyor ⏳'}
+                      </span>
+                    </span>
+                  </button>
+                ))}
+                <button onClick={() => navigate('/interview')} className="w-full mt-2 text-xs font-bold text-moss hover:underline flex items-center justify-center gap-1">
+                  <TrendingUp className="w-3.5 h-3.5" /> Mülakata hazırlan
+                </button>
+              </div>
             ) : (
-              <p className="text-sm text-[#a38b76] font-medium p-4 text-center bg-white/30 rounded-xl border border-white/40">Şu an ufukta bekleyen bir mülakat görünmüyor. ☕</p>
+              <p className="text-sm text-ink-muted font-medium p-4 text-center bg-glass/30 rounded-xl border border-glass/40">Şu an ufukta bekleyen bir mülakat görünmüyor. ☕</p>
             )}
           </div>
 
-          {/* Bekleyen Görevler */}
-          <div className="glass-panel p-6 bg-white/40">
-            <h3 className="text-lg font-bold text-[#4a3f35] mb-4 flex items-center font-serif">
-              <CheckSquare className="w-5 h-5 mr-2 text-[#2c5e4a]" />
+          <div className="glass-panel p-6">
+            <h3 className="text-lg font-bold text-ink mb-4 flex items-center font-serif">
+              <CheckSquare className="w-5 h-5 mr-2 text-moss" />
               Bekleyen Görevler
             </h3>
-            {pendingTodos.length > 0 ? (
-              <div className="space-y-3">
-                {pendingTodos.map(todo => (
-                  <div key={todo.id} className="flex items-start p-3 bg-white/60 border border-white/80 rounded-xl shadow-sm">
-                    <div className="w-4 h-4 rounded-md border-2 border-[#a38b76] mt-0.5 mr-3 flex-shrink-0"></div>
-                    <div>
-                      <p className="font-bold text-[#4a3f35] text-sm leading-tight">{todo.text}</p>
-                      <p className="text-[10px] font-bold text-[#c05c3e] mt-1 uppercase tracking-wider">{todo.companyName}</p>
-                    </div>
-                  </div>
+            {todos.length > 0 ? (
+              <div className="space-y-2">
+                {todos.map(todo => (
+                  <label key={todo.id} className="flex items-start p-3 bg-glass/60 border border-glass/80 rounded-xl shadow-sm cursor-pointer hover:bg-glass/80 transition-colors group">
+                    <input
+                      type="checkbox"
+                      checked={false}
+                      onChange={() => toggleTodo(todo.appId, todo.id)}
+                      className="peer sr-only"
+                    />
+                    <span className="w-5 h-5 rounded-md border-2 border-ink-muted mt-0.5 mr-3 flex-shrink-0 group-hover:border-moss group-hover:bg-moss/10 transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-moss" />
+                    <span>
+                      <span className="block font-bold text-ink text-sm leading-tight">{todo.text}</span>
+                      <span className="block text-[10px] font-bold text-clay mt-1 uppercase tracking-wider">{todo.companyName}</span>
+                    </span>
+                  </label>
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-[#a38b76] font-medium p-4 text-center bg-white/30 rounded-xl border border-white/40">Tüm görevlerini tamamlamışsın, harikasın! ✨</p>
+              <div className="text-center p-4 bg-glass/30 rounded-xl border border-glass/40">
+                <p className="text-sm text-ink-muted font-medium">Tüm görevlerini tamamlamışsın, harikasın! ✨</p>
+                {applications.length > 0 && (
+                  <button onClick={() => openEditor(applications[0])} className="mt-2 inline-flex items-center text-xs font-bold text-moss hover:underline">
+                    <Plus className="w-3.5 h-3.5 mr-1" /> Yeni görev ekle
+                  </button>
+                )}
+              </div>
             )}
           </div>
         </div>
       </div>
+
+      <Companion />
     </div>
   );
 };

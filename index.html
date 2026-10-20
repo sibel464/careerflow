@@ -1,10 +1,26 @@
 <!doctype html>
-<html lang="en">
+<html lang="tr">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>web</title>
+    <meta name="description" content="Sibilia — derslerin, pomodoro odağın, günlüğün ve notların tek yerde. İstersen kariyer modülüyle başvurularını da takip et." />
+    <meta name="theme-color" content="#f4ebd8" />
+    <title>Sibilia · Ders, odak ve günlük</title>
+    <script>
+      // Apply the saved theme before first paint to avoid a light flash.
+      try {
+        var t = localStorage.getItem('careerflow_theme');
+        if (t === 'dark' || (!t && matchMedia('(prefers-color-scheme: dark)').matches)) document.documentElement.classList.add('dark');
+        if (location.pathname.indexOf('/study') === 0) document.documentElement.dataset.space = 'study';
+        var prefs = JSON.parse(localStorage.getItem('careerflow_preferences') || '{}');
+        document.documentElement.dataset.palette = prefs.palette || 'lavender';
+        var decor = prefs.decor || {};
+        document.documentElement.dataset.wood = decor.wood || 'oak';
+        document.documentElement.dataset.board = decor.board || 'cork';
+        document.documentElement.dataset.paper = decor.paper || 'cream';
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { AlertTriangle, X } from 'lucide-react';
 
 interface ConfirmModalProps {
@@ -18,59 +18,57 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   title,
   message,
   confirmText = 'Onayla',
-  cancelText = 'İptal',
+  cancelText = 'Vazgeç',
 }) => {
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in">
-      <div 
-        className="fixed inset-0 bg-slate-900/40 dark:bg-slate-950/60 backdrop-blur-md transition-opacity" 
-        onClick={onClose}
-      />
-      <div className="glass-card bg-white/90 dark:bg-slate-900/90 rounded-3xl w-full max-w-md overflow-hidden transform transition-all z-10 animate-slide-up shadow-2xl shadow-rose-500/10">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 animate-fade-in">
+      <div className="fixed inset-0 bg-ink/25 backdrop-blur-md" onClick={onClose} />
+      <div role="alertdialog" aria-modal="true" className="glass-panel bg-glass/80 dark:bg-cream/95 w-full max-w-md overflow-hidden z-10 animate-slide-up shadow-[0_20px_60px_rgba(107,76,58,0.2)]">
         <div className="p-8">
           <div className="flex items-start">
-            <div className="flex-shrink-0 flex items-center justify-center h-14 w-14 rounded-2xl bg-rose-100 text-rose-600 dark:bg-rose-500/20 dark:text-rose-400 shadow-inner">
+            <div className="flex-shrink-0 flex items-center justify-center h-14 w-14 rounded-2xl bg-clay/15 text-clay border border-clay/20">
               <AlertTriangle className="h-7 w-7" aria-hidden="true" />
             </div>
             <div className="ml-5 flex-1">
-              <div className="flex justify-between items-center">
-                <h3 className="text-xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
-                  {title}
-                </h3>
-                <button 
+              <div className="flex justify-between items-center gap-3">
+                <h3 className="text-xl font-bold text-ink">{title}</h3>
+                <button
                   onClick={onClose}
-                  className="text-slate-400 hover:text-rose-500 bg-slate-100/50 dark:bg-slate-800/50 p-1.5 rounded-xl transition-all hover:scale-110"
+                  aria-label="Kapat"
+                  className="text-ink-muted hover:text-clay bg-glass/50 p-1.5 rounded-xl transition-all hover:scale-110 border border-glass/60"
                 >
                   <X className="h-5 w-5" />
                 </button>
               </div>
-              <div className="mt-3">
-                <p className="text-sm font-medium text-slate-500 dark:text-slate-400 leading-relaxed">
-                  {message}
-                </p>
-              </div>
+              <p className="mt-3 text-sm font-medium text-ink-soft leading-relaxed">{message}</p>
             </div>
           </div>
         </div>
-        <div className="bg-slate-50/50 dark:bg-slate-800/30 px-8 py-5 flex flex-col sm:flex-row-reverse sm:space-x-reverse sm:space-x-3 gap-3 sm:gap-0 backdrop-blur-sm">
+        <div className="bg-glass/30 border-t border-glass/50 px-8 py-5 flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
+          <button type="button" className="btn-ghost px-5 py-3 text-sm" onClick={onClose}>
+            {cancelText}
+          </button>
           <button
             type="button"
-            className="w-full inline-flex justify-center rounded-xl border border-transparent px-5 py-3 bg-gradient-to-r from-rose-600 to-rose-500 text-sm font-bold text-white shadow-lg shadow-rose-500/30 hover:from-rose-500 hover:to-rose-400 focus:outline-none focus:ring-4 focus:ring-rose-500/30 sm:ml-3 sm:w-auto transition-all hover:-translate-y-0.5 active:scale-95"
+            autoFocus
+            className="inline-flex justify-center rounded-xl px-5 py-3 bg-clay/90 hover:bg-clay text-sm font-bold text-white shadow-lg shadow-clay/25 border border-clay-deep/50 transition-all active:scale-95"
             onClick={() => {
               onConfirm();
               onClose();
             }}
           >
             {confirmText}
-          </button>
-          <button
-            type="button"
-            className="w-full inline-flex justify-center rounded-xl border border-slate-300 dark:border-slate-600 px-5 py-3 bg-white dark:bg-slate-800 text-sm font-bold text-slate-700 dark:text-slate-200 shadow-sm hover:bg-slate-50 dark:hover:bg-slate-700 focus:outline-none focus:ring-4 focus:ring-slate-500/20 sm:w-auto transition-all hover:-translate-y-0.5 active:scale-95"
-            onClick={onClose}
-          >
-            {cancelText}
           </button>
         </div>
       </div>

@@ -8,6 +8,11 @@ export interface TodoItem {
   completed: boolean;
 }
 
+export interface StatusChange {
+  status: ApplicationStatus;
+  date: string;
+}
+
 export interface Application {
   id: string;
   companyName: string;
@@ -35,4 +40,8 @@ export interface Application {
   todos?: TodoItem[];
   interviewQuestions?: string;
   cvLink?: string;
+
+  // V4 Takvim & Geçmiş
+  interviewDate?: string; // ISO datetime of the next interview
+  history?: StatusChange[];
 }
